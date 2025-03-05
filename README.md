@@ -13,6 +13,7 @@ Dự án này giúp tìm kiếm video dựa trên mô tả của người dùng 
 ## 🔍 Hướng dẫn sử dụng
 1️⃣ Tìm kiếm trên YouTube
 - Chỉ cần nhập mô tả video, Youtube.Search sẽ tìm kiếm và chuyển đổi cách video tìm được trên Youtuber thành các mô tả để trả về danh sách video phù hợp, mô tả, hình ảnh của video.
+
 🔥Lưu ý: Youtube.Search.py chỉ hoạt động với những video nói bằng ngôn ngữ Tiếng Anh, và phải có tiếng nói (các video không tiếng, ngôn ngữ khác, người nói nói không rõ ràng đều sẽ bị bỏ qua).
 
 2️⃣ Tìm kiếm trong Database
