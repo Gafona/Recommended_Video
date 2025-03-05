@@ -20,7 +20,7 @@ Chỉ cần nhập mô tả video, hệ thống sẽ tìm kiếm và trả về 
 - sử dụng Transfer_video_to_decripsion.py để chuyển hóa các video thành các dạng mô tả.
 - Tiếp theo đó là sử dụng vector.py để chuyển đổi tất cả các file mô tả trên thành danh sách tên và tỉ lệ để phục vụ so sánh.
 - Cuối cùng là sử dung Database_Search.py để người nhập mô tả vào rồi so sánh và trả lại nhưng video có phần trăm tương thích cao (>30%).
-- 
+  
 🔥Lưu ý: Trong những file.py trên vẫn còn nhiều chỗ yêu cầu người dùng phải sửa lại địa chỉ hay API key để có thể sử dụng được, nên vui lòng đọc kĩ và thay đổi trước khi sử dụng nha.
 
 ## 📦 Các thư viện đã sử dụng
