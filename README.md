@@ -25,7 +25,7 @@ Chỉ cần nhập mô tả video, hệ thống sẽ tìm kiếm và trả về 
 🔥Lưu ý: Trong những file.py trên vẫn còn nhiều chỗ yêu cầu người dùng phải sửa lại địa chỉ hay API key để có thể sử dụng được, nên vui lòng đọc kĩ và thay đổi trước khi sử dụng nha.
 
 ## 📦 Các thư viện đã sử dụng
-- yt_dlp để tìm kiếm video trên YouTube.
+- duckduckgo_search để tìm kiếm video trên YouTube.
 - moviepy, speech_recognition để trích xuất nội dung từ video.
 - sentence_transformers, numpy để tạo vector từ văn bản.
 - sklearn.metrics.pairwise để so sánh độ tương đồng giữa mô tả và video.
