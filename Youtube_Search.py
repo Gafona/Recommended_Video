@@ -1,125 +1,94 @@
-from yt_dlp import YoutubeDL
-from youtube_transcript_api import YouTubeTranscriptApi
+from duckduckgo_search import DDGS
+import youtube_transcript_api
 from groq import Groq
-from langdetect import detect  # type: ignore
 
-# API key và cấu hình Groq
-api_key = "---------------------------------------------------" #Có thể lấy API key của Grop từ trang web https://groq.com/
+api_key = "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"
 client = Groq(api_key=api_key)
 model_name = "llama-3.3-70b-versatile"
 
-# Prompt hệ thống để hướng dẫn AI cách tạo mô tả video
-system_prompt = """You are an advanced video summary tool.
-Depend on what kind of languages of the video, you need to translate to its language, but if you don't recognize anything, please send nothing like "".
-Given a script extracted from a video, you are asked to generate a description as well as people read the description and they could know what the video discuss without watching whole video. However, words will be limit smaller than 100 words."""
-
-# Prompt dành cho người dùng
-user_prompt = """VIDEO SCRIPT: {script}
+system_prompt_before = """You are a tool that transforms customer requests into keywords or concise, well-structured content for searching videos on YouTube. Therefore, my request is for you to convert customer desires to meet these criteria and find the most relevant videos with 10 words."""
+user_prompt_before = """Customer requests: {script}
 DESCRIPTION:
 """
 
-def is_english(text):
-    """Kiểm tra xem văn bản có phải tiếng Anh không."""
-    try:
-        return detect(text) == "en"
-    except:
-        return False  # Nếu lỗi xảy ra, giả định không phải tiếng Anh
+system_prompt_after = """You are an advanced video summary tool. Depend on what kind of languages of the video, you need to translate to its language, but if you don't recognize anything, please send nothing like "".Given a script extracted from a video, you are asked to generate a description as well as people read the description and they could know what the video discuss without watching whole video. However, words will be limit smaller than 100 words."""
+user_prompt_after = """VIDEO SCRIPT: {script}
+DESCRIPTION:
+"""
 
-def search_youtube(query):
-    """Tìm kiếm 5 video trên YouTube theo truy vấn đầu vào."""
-    ydl_opts = {"quiet": True, "default_search": "ytsearch5"}
-    with YoutubeDL(ydl_opts) as ydl:
-        result = ydl.extract_info(query, download=False)
-        videos = [
-            {"title": entry["title"], "videoId": entry["id"]}
-            for entry in result["entries"]
-        ]
-    return videos
+def input_process(__input__):
+    script = __input__[:600]
+    chat_completion = client.chat.completions.create(
+    messages=[
+            {"role": "system", "content": system_prompt_before},
+            {"role": "user", "content": user_prompt_before.format(script=script)},
+    ],
+        model=model_name,
+        temperature=0.5,
+        max_completion_tokens=1024,
+        top_p=1,
+        stop=None,
+        stream=False,
+    )  
+    description = chat_completion.choices[0].message.content
+    return description
 
-def display_videos(videos):
-    """Trả về danh sách tiêu đề và đường dẫn của các video tìm được."""
-    title_list = []
-    link_list = []
+def Translate_to_short_form(input_long_form):
+    script = input_long_form[:600]
+    chat_completion = client.chat.completions.create(
+    messages=[
+            {"role": "system", "content": system_prompt_after},
+            {"role": "user", "content": user_prompt_after.format(script=script)},
+    ],
+        model=model_name,
+        temperature=0.5,
+        max_completion_tokens=1024,
+        top_p=1,
+        stop=None,
+        stream=False,
+    )  
+    description = chat_completion.choices[0].message.content
+    return description
+
+def search_videos(keywords: str, max_results: int = 10):
+    """
+    Tìm kiếm video bằng DuckDuckGo.
+    Trả về danh sách chứa tiêu đề, đường dẫn video và nội dung transcript.
     
-    for i, video in enumerate(videos, start=1):
-        title_list.append(f"{video['title']}")
-        link_list.append(f"https://www.youtube.com/watch?v={video['videoId']}")
+    Args:
+        keywords (str): Từ khóa tìm kiếm.
+        max_results (int): Số lượng kết quả tối đa. Mặc định là 10.
     
-    return title_list, link_list
+    Returns:
+        list[dict]: Danh sách chứa thông tin video (title, video_link, transcript).
+    """
+    results = DDGS().videos(keywords=keywords, max_results=max_results)
+    
+    video_list = []
+    for video in results:
+        video_id = video.get("content", "").split("v=")[-1]  # Lấy ID video từ URL
+        transcript = get_video_transcript(video_id)
+        
+        video_info = {
+            "title": video.get("title", "No title"),
+            "video_link": video.get("content", "No link"),
+            "transcript": transcript,
+        }
+        video_list.append(video_info)
+    
+    return video_list
 
-def link_and_tittle(input):
-    """Tìm video và trả về tiêu đề cùng liên kết của chúng."""
-    videos = search_youtube(input)
-    return display_videos(videos)
-
-def get_transcript(video_id):
-    """Lấy phụ đề từ video nếu có."""
+def get_video_transcript(video_id: str):
+    """Lấy transcript của video YouTube nếu có."""
     try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        return transcript
+        transcript = youtube_transcript_api.YouTubeTranscriptApi.get_transcript(video_id)
+        return " ".join([entry["text"] for entry in transcript])
     except Exception as e:
-        print("Transcript not available:", str(e))
-        return None
+        return f"Transcript không khả dụng: {e}"
 
-def split_transcript_into_chunks(transcript, chunk_duration=30):
-    """Chia nhỏ phụ đề thành các đoạn có thời lượng tối đa 30 giây."""
-    if not transcript:  
-        return []  # Bỏ qua nếu không có phụ đề
-    
-    chunks = []
-    current_chunk = []
-    chunk_start = 0
-    
-    for entry in transcript:
-        current_time = entry['start']
-        current_chunk.append(entry['text'])
-        
-        # Khi thời gian vượt quá chunk_duration, lưu lại đoạn hiện tại
-        if current_time - chunk_start >= chunk_duration:
-            chunks.append({"text": " ".join(current_chunk), "start": chunk_start, "end": current_time})
-            current_chunk = []
-            chunk_start = current_time
-    
-    # Thêm đoạn cuối cùng nếu có
-    if current_chunk:
-        chunks.append({"text": " ".join(current_chunk), "start": chunk_start, "end": current_time})
-    
-    return chunks
-
-def format_transcript_chunks(chunks):
-    """Định dạng các đoạn phụ đề để dễ xử lý hơn."""
-    formatted_chunks = []
-    
-    for chunk in chunks:
-        formatted_chunks.append(f"[{chunk['start']}s - {chunk['end']}s] {chunk['text']}")
-    
-    return "\n".join(formatted_chunks)
-
-def decription_youtube_video(input):
-    """Tạo mô tả cho 5 video đầu tiên tìm thấy từ YouTube."""
-    videos = search_youtube(input)
-    description_list = []
-    
-    for i in range(5):
-        video_id = videos[i]["videoId"]
-        transcript = get_transcript(video_id)
-        chunks = split_transcript_into_chunks(transcript)
-        script = format_transcript_chunks(chunks)[:600]  # Giới hạn độ dài script
-        
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt.format(script=script)},
-            ],
-            model=model_name,
-            temperature=0.5,
-            max_completion_tokens=1024,
-            top_p=1,
-            stop=None,
-            stream=False,
-        )
-        
-        description = chat_completion.choices[0].message.content
-        description_list.append(description)
-    
-    return description_list
+if __name__ == "__main__":
+    keyword = input_process("Python tutorial")
+    videos = search_videos(keyword, max_results=5)
+    for idx, video in enumerate(videos, 1):
+        print(f"{idx}. {video['title']}: {video['video_link']}")
+        print(f"Transcript: {Translate_to_short_form(video['transcript'][:600])}...")  # Hiển thị 200 ký tự đầu
