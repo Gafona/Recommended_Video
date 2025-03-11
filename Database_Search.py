@@ -8,8 +8,8 @@ import pandas as pd
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-file_names = np.load("file_names.npy") #tùy thuộc vào cách đặt tên file của bạn mà có thể thay đổi
-embeddings = np.load("embeddings.npy") #tùy thuộc vào cách đặt tên file của bạn mà có thể thay đổi
+file_names = np.load("file_names.npy")
+embeddings = np.load("embeddings.npy")
 
 def find_x(filename):
     match = re.search(r'Grop_(\d+)', filename, re.IGNORECASE)
@@ -53,3 +53,12 @@ def read_grop_file(grop_path):
             content = f.read(250) + "..."  # Lấy 100 ký tự đầu
         return content
     return "File not found"
+def get_video_thumbnail(video_path):
+    cap = cv2.VideoCapture(video_path)
+    success, frame = cap.read()
+    cap.release()
+    if success:
+        thumbnail_path = video_path.replace(".mp4", "_thumbnail.jpg")
+        cv2.imwrite(thumbnail_path, frame)
+        return thumbnail_path
+    return None
